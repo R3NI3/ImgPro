@@ -1,5 +1,8 @@
 from skimage import data, io, filters, feature
-from sklearn.metrics.pairwise import euclidean_distances
+from scipy.spatial.distance import cdist
+from scipy.spatial import KDTree
+from math import sqrt
+import numpy as np
 
 class LBP_Descriptor:
 	def __init__(self, numPoints, radius):
@@ -20,42 +23,64 @@ def seg_img(image, radius):
 			
 	return subimg
 
-dist_Treshhold = 15
-sim_Treshhold = 1000
-#step 1: get img
+
+#********************* Algorithm *********************
+# step 0: Initialization
+radius = 5 # sub-images radius 
+subimg_step = 1 # num of pixels to be skiped for subimages
+numpoints = 8 #number of points considered in feature extration LBP
+LBP_radius = 1 # distace of the points to get
+dist_Treshold = 15 #threshold for distance
+sim_Treshold = 1000 #dissimilarity threshold
+lex_dist = 10
+
+#step 1: get img OK
+print "step 1"
 image = data.coins()
 for i in range(0, 50):
 	for j in range(0, 50):
 		image[i][j] = image[200+i][200+j]
-io.imshow(image)
-io.show()
-#step 2: apply filter
-lf_img = filters.gaussian(image, sigma = 2)
-#step 3: get subimages
-subimgs = seg_img(lf_img, 25)
-#step 4: get features for subimages
-print "step 4"
-descriptor = LBP_Descriptor(24, 3)
-lbp = {}
-print len(subimgs.keys())
-for i in subimgs.keys():
-	lbp[i] = (descriptor.LBPcalc(subimgs[i])).flatten()
+#io.imshow(image)
+#io.show()
 
-#step 5: euclidean distance to subimages
+#step 2: apply filter OK
+print "step 2"
+lf_img = filters.gaussian(image, sigma = 2)
+
+#step 3: get subimages OK
+print "step 3"
+subimages = [image[center1-radius:center1+radius, center2-radius:center2+radius]
+								for center1 in xrange(radius,
+												image.shape[0]-radius,
+												subimg_step)
+								for center2 in xrange(radius,
+												image.shape[1]-radius,
+												subimg_step)]
+
+#step 4: get features for subimages OK
+print "step 4"
+LBP_mat = list(map(lambda subimg:feature.local_binary_pattern(subimg,
+												numpoints,
+												LBP_radius,
+												method = "uniform"),
+					subimages))
+#transform matrices in rows list OK
+LBP_list = np.array(list(map(lambda subimg:subimg.flatten(), LBP_mat)))
+
+#lexicographic order maybe OK
+#lex_order = np.array(list(LBP_list[np.lexsort(LBP_list.T[::-1])]))
+
+#step 5: euclidean distance to subimages OK
 print "step 5"
-elements = lbp.values()
-distMatrix = euclidean_distances(elements, elements)
-#step 6: Choose similar subimgs
-minimum = []
-for i in xrange(1, len(distMatrix)):
-	minimum.append(min(distMatrix[i][:i]))
-match_pos = []
-print minimum
-for i in range(0,len(minimum)):
-	if minimum[i] <= 300:
-		for key, value in lbp.iteritems():
-			if (value.all() == elements[i].all()):
-				match_pos.append(key)
-print match_pos
+#dist = list(map(lambda lex:np.linalg.norm(lex_order[0] - lex), lex_order[1:20]))
+#print dist
+#print min(dist)
+#print dist.index(min(dist))
+tree = KDTree(LBP_list)
+dist, ind = tree.query([LBP_list[:10]], k=1)
+print dist
+print ind
+#step 6: Choose similar subimgs creating similar set
+print "step 6"
 #io.imshow(lbp)
 #io.show()
