@@ -86,7 +86,27 @@ cnt_list = np.argwhere(min_dist < 10)
 pos_set = map(lambda cnt:new_centers[cnt[0]], cnt_list)
 
 #step 7: clear image OK
+print "step 7"
+count = 0
+for i in xrange(1, image.shape[0]-1):
+	for j in xrange(1, image.shape[1]-1):
+		if image[i][j] == 0:
+			if 0 in [image[i-1][j],image[i+1][j],image[i][j-1],image[i][j+1]]:
+				count+=1
+
 for t in pos_set:
 	image[t[0]][t[1]] = 0
+
+count2 = 0
+for i in xrange(1, image.shape[0]-1):
+	for j in xrange(1, image.shape[1]-1):
+		if image[i][j] == 0:
+			if 0 in [image[i-1][j],image[i+1][j],image[i][j-1],image[i][j+1]]:
+				count2+=1
+diff = count2 - count
+if count2 > 500:
+	print "Forged"
+else:
+	print "Authentic"
 io.imshow(image)
 io.show()
